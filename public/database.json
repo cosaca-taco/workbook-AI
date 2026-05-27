@@ -2,7 +2,7 @@
   "grades": {
     "小学1年生": {
       "算数": [
-        { "unit": "いくつといくつ（数の分解）", "defaultQuestions": 3, "type": "choice", "hint": "10はいくつといくつにわけられるかな？" },
+        { "unit": "いくつといくつ（数の分解）..", "defaultQuestions": 3, "type": "choice", "hint": "10はいくつといくつにわけられるかな？" },
         { "unit": "たしざん（くりあがりなし）", "defaultQuestions": 5, "type": "choice", "hint": "あわせるといくつになるかな？" }
       ],
       "国語": [

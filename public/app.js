@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // 画面のパーツをすべて取得
+    // 画面のパーツをすべて取得 ver.1
     const gradeSelect = document.getElementById("grade-select");
     const subjectSelect = document.getElementById("subject-select");
     const unitSelect = document.getElementById("unit-select");
