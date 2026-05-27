@@ -24,10 +24,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 🔒 確実なアプローチ：公開用の一時フォルダ内に、金庫のキーを書き込んだ「env.js」を自動生成
+# 新しいコード（環境変数を使って、ログに1文字も出さずに裏側でファイルを生成します！）
       - name: Create Env Script
+        env:
+          MY_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          echo "window.GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}';" > ./public/env.js
+          echo "window.GEMINI_API_KEY='${MY_GEMINI_KEY}';" > ./public/env.js';" > ./public/env.js
 
       # 自動生成した env.js を index.html に自動で読み込ませる加工（GoogleのAIを刺激しません）
       - name: Inject script tag to HTML
