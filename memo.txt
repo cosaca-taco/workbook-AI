@@ -1,0 +1,55 @@
+workbook-AI-Key
+AIzaSyCWYcLtJBLdNaiSxctgKa3afBMAANLmRZo
+
+Firebase SDK の追加　　<script> タグを使用する
+
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyClrurIrFji2f5WTygbERfishF_zyhEzrc",
+    authDomain: "workbook-ai-taco.firebaseapp.com",
+    projectId: "workbook-ai-taco",
+    storageBucket: "workbook-ai-taco.firebasestorage.app",
+    messagingSenderId: "73582664346",
+    appId: "1:73582664346:web:4235815d33cea7ef095d23",
+    measurementId: "G-KQK9W9G24E"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
+
+Firebase SDK の追加　　npm を使用する
+--
+npm install firebase
+--
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyClrurIrFji2f5WTygbERfishF_zyhEzrc",
+  authDomain: "workbook-ai-taco.firebaseapp.com",
+  projectId: "workbook-ai-taco",
+  storageBucket: "workbook-ai-taco.firebasestorage.app",
+  messagingSenderId: "73582664346",
+  appId: "1:73582664346:web:4235815d33cea7ef095d23",
+  measurementId: "G-KQK9W9G24E"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

@@ -1,0 +1,120 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background-color: #0B132B; /* 宇宙をイメージした深い紺色 */
+    color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    -webkit-user-select: none; /* 子どもの誤操作によるテキスト選択を防止 */
+    user-select: none;
+}
+
+header {
+    width: 100%;
+    max-width: 600px;
+    padding: 15px;
+    display: flex;
+    justify-content: flex-end;
+    box-sizing: border-box;
+}
+
+.coin-container {
+    background-color: #1C2541;
+    border: 3px solid #FFD700;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #FFD700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+main {
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+h2 {
+    font-size: 1.6rem;
+    color: #4EA8DE;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.btn-main, .option-btn, .btn-next {
+    width: 100%;
+    padding: 20px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+    transition: transform 0.1s;
+}
+
+/* ぼうけんへ出発ボタン */
+.btn-main {
+    background-color: #E63946;
+    color: white;
+    box-shadow: 0 6px #9B1C26;
+}
+.btn-main:active {
+    transform: translateY(6px);
+    box-shadow: none;
+}
+
+/* 3択の選択肢ボタン */
+.option-btn {
+    background-color: #48CAE4;
+    color: #03045E;
+    box-shadow: 0 6px #0077B6;
+    text-align: left;
+    padding-left: 30px;
+}
+.option-btn:active:not([disabled]) {
+    transform: translateY(6px);
+    box-shadow: none;
+}
+.option-btn:disabled {
+    background-color: #6C757D;
+    color: #DEE2E6;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* つぎへ・メニューにもどるボタン */
+.btn-next {
+    background-color: #70E000;
+    color: #004B23;
+    box-shadow: 0 6px #38B000;
+}
+.btn-next:active {
+    transform: translateY(6px);
+    box-shadow: none;
+}
+
+/* メッセージウィンドウ（AIのテキスト表示エリア） */
+.message-box {
+    background-color: #1C2541;
+    border: 3px solid #4EA8DE;
+    border-radius: 15px;
+    padding: 22px;
+    min-height: 180px;
+    margin-bottom: 25px;
+    text-align: left;
+    line-height: 1.8;
+    font-size: 1.2rem;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    white-space: pre-wrap; /* 改行を有効にする */
+}
+
+.hidden {
+    display: none !important;
+}

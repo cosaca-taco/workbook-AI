@@ -1,0 +1,47 @@
+name: Deploy Public Folder to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 🔒 確実なアプローチ：公開用の一時フォルダ内に、金庫のキーを書き込んだ「env.js」を自動生成
+      - name: Create Env Script
+        run: |
+          echo "window.GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}';" > ./public/env.js
+
+      # 自動生成した env.js を index.html に自動で読み込ませる加工（GoogleのAIを刺激しません）
+      - name: Inject script tag to HTML
+        run: |
+          sed -i 's|<script src="app.js"></script>|<script src="env.js"></script><script src="app.js"></script>|g' ./public/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public' # publicフォルダだけを切り取って公開
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

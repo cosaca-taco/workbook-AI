@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【テスト用】AI学習ドリル・モンスターズ</title>
+    
+    <script>
+        window.GEMINI_API_KEY = "ここに新しく作り直した本物のAPIキーを貼り付けてください";
+    </script>
+    
+    <script src="app.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #e8f4f8; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-bottom: 25px; }
+        select, button { font-size: 16px; padding: 10px 20px; margin: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        button { background-color: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #219653; }
+        .quiz-box { margin-top: 30px; padding: 20px; border: 2px solid #27ae60; border-radius: 10px; background-color: #fcfcfc; display: none; text-align: left; }
+        .error-message { color: #e74c3c; font-weight: bold; margin-top: 20px; background: #fadbd8; padding: 15px; border-radius: 8px; display: none; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container" style="border: 3px dashed #27ae60;">
+        <div style="background: #27ae60; color: white; padding: 5px; font-weight: bold; border-radius: 5px; margin-bottom: 10px;">ローカルテスト環境</div>
+        <h1>👾 AI学習ドリル・モンスターズ 👾</h1>
+        <p>学年を選んで、AIモンスターに挑戦しよう！</p>
+        
+        <select id="grade-select">
+            <option value="小学1年生">小学1年生</option>
+            <option value="小学2年生">小学2年生</option>
+            <option value="小学3年生">小学3年生</option>
+        </select>
+        
+        <button id="start-btn">にいどむ！</button>
+
+        <div id="error-box" class="error-message"></div>
+
+        <div id="quiz-area" class="quiz-box">
+            <h3 id="monster-name"></h3>
+            <p id="quiz-text" style="font-size: 18px; font-weight: bold;"></p>
+            <div id="choices-area"></div>
+        </div>
+    </div>
+</body>
+</html>
