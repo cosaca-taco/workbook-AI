@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI学習ドリル・モンスターズver.1</title>
+    <title>AI学習ドリル・モンスターズ</title>
+    <script src="env.js"></script>
     <script src="app.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; text-align: center; }
@@ -12,14 +13,19 @@
         .setup-group { margin: 15px 0; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         label { font-weight: bold; color: #4a5568; display: block; margin-bottom: 5px; }
         select, input, button { font-size: 16px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
-        button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 15px; }
-        button:hover { background-color: #2980b9; }
         
-        /* 📖 解説画面エリア */
-        .intro-box { margin-top: 30px; padding: 20px; border: 2px solid #e67e22; border-radius: 10px; background-color: #fff9f2; display: none; text-align: left; }
-        .intro-box h2 { color: #d35400; margin-top: 0; }
+        /* 🎮 ボタン用のスタイル分け */
+        .btn-container { display: flex; gap: 10px; margin-top: 15px; }
+        .info-btn { background-color: #e67e22; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .info-btn:hover { background-color: #d35400; }
+        .battle-btn { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .battle-btn:hover { background-color: #2980b9; }
+        button:disabled { background-color: #cbd5e1 !important; cursor: not-allowed; }
+        
+        /* 📖 自作の解説文表示ボックス */
+        .local-intro-box { margin-top: 15px; padding: 15px; border: 2px dashed #e67e22; border-radius: 8px; background-color: #fff9f2; text-align: left; display: none; }
 
-        /* 👾 クイズ（バトル）エリア */
+        /* 👾 バトルエリア */
         .quiz-box { margin-top: 30px; padding: 20px; border: 2px solid #3498db; border-radius: 10px; background-color: #fcfcfc; display: none; text-align: left; }
         .error-message { color: #e74c3c; font-weight: bold; margin-top: 20px; background: #fadbd8; padding: 15px; border-radius: 8px; display: none; text-align: left; }
     </style>
@@ -35,7 +41,6 @@
                     <option value="">-- がくねんを えらんでね --</option>
                     <option value="小学1年生">小学1年生</option>
                     <option value="小学2年生">小学2年生</option>
-                    <option value="小学3年生">小学3年生</option>
                 </select>
             </div>
 
@@ -58,22 +63,20 @@
                 <input type="number" id="question-count" min="1" max="10" value="3">
             </div>
             
-            <button id="start-btn" disabled>ぼうけんに でかける！</button>
+            <div class="btn-container">
+                <button id="show-intro-btn" class="info-btn" disabled>📖 せんせいの 解説をよむ</button>
+                <button id="start-battle-btn" class="battle-btn" disabled>⚔️ もんだいに いどむ！</button>
+            </div>
+
+            <div id="local-intro-area" class="local-intro-box">
+                <h3 style="margin:0 0 5px 0; color:#d35400;">💡 せんせいの アドバイス</h3>
+                <p id="local-intro-text" style="margin:0; font-size:15px; line-height:1.5; white-space:pre-wrap;"></p>
+            </div>
         </div>
 
         <div id="error-box" class="error-message"></div>
 
-        <div id="intro-area" class="intro-box">
-            <h2 id="intro-title">📖 たんげんの おべんきょう</h2>
-            <p id="intro-text" style="font-size: 16px; line-height: 1.6; white-space: pre-wrap;"></p>
-            <button id="battle-start-btn" style="background-color: #e67e22;">👍 わかった！モンスターにいどむ！</button>
-        </div>
-
-        <div id="quiz-area" class="quiz-box">
-            <h3 id="monster-name"></h3>
-            <p id="quiz-text" style="font-size: 18px; font-weight: bold;"></p>
-            <div id="choices-area"></div>
-        </div>
+        <div id="quiz-area" class="quiz-box"></div>
     </div>
 </body>
 </html>

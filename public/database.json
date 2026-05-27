@@ -2,31 +2,42 @@
   "grades": {
     "小学1年生": {
       "算数": [
-        { "unit": "いくつといくつ（数の分解）..", "defaultQuestions": 3, "type": "choice", "hint": "10はいくつといくつにわけられるかな？" },
-        { "unit": "たしざん（くりあがりなし）", "defaultQuestions": 5, "type": "choice", "hint": "あわせるといくつになるかな？" }
+        { 
+          "unit": "いくつといくつ（数の分解）", 
+          "defaultQuestions": 3, 
+          "type": "choice", 
+          "intro": "10は『7と3』や『5と5』みたいに、いくつかの数にわけることができるよ！あたまのなかで、チョコレートをなかよくわけるイメージをしてみよう！"
+        },
+        { 
+          "unit": "たしざん（くりあがりなし）", 
+          "defaultQuestions": 5, 
+          "type": "choice", 
+          "intro": "たしざんは『あわせると いくつになるかな？』ということだよ。がっちゃんこ！とあわせるイメージでかんがえてみてね！"
+        }
       ],
       "国語": [
-        { "unit": "ひらがな・カタカナの ことば", "defaultQuestions": 3, "type": "choice", "hint": "ただしい文字をえらぼう" }
+        { 
+          "unit": "ひらがな・カタカナの ことば", 
+          "defaultQuestions": 3, 
+          "type": "choice", 
+          "intro": "ただしい文字（もじ）をえらぶクイズだよ！よーく文字のかたちをみて、あっているものをえらんでね！"
+        }
       ]
     },
     "小学2年生": {
       "算数": [
-        { "unit": "かけ算九九（２のだん）", "defaultQuestions": 5, "type": "choice", "hint": "2の段をしっかりおもいだそう" }
-      ],
-      "国語": [
-        { "unit": "かん字の よみかた", "defaultQuestions": 5, "type": "choice", "hint": "なんてよむかえらぼう" }
-      ]
-    },
-    "小学3年生": {
-      "算数": [
-        { "unit": "わり算（あまりなし）", "defaultQuestions": 5, "type": "choice", "hint": "おなじ数ずつわけるといくつかな？" }
+        { 
+          "unit": "かけ算九九（２のだん）", 
+          "defaultQuestions": 5, 
+          "type": "choice", 
+          "intro": "2のだんは、2ずつふえていくよ！『にいちがに、ににんがし…』とおおきなこえでリズムよくおもいだしてみよう！"
+        }
       ]
     }
   },
   "monsters": [
-    { "element": "ほのお", "name": "タスザンリオン", "skill": "プラス・バーン" },
-    { "element": "みず", "name": "ヒキザンペンギン", "skill": "マイナス・ブリザード" },
-    { "element": "かみなり", "name": "カケザンウルフ", "skill": "九九・サンダー" },
-    { "element": "だいち", "name": "ワリザンベア", "skill": "あまりアース" }
+    { "element": "ほのお", "name": "タスザンリオン" },
+    { "element": "みず", "name": "ヒキザンペンギン" },
+    { "element": "かみなり", "name": "カケザンウルフ" }
   ]
 }

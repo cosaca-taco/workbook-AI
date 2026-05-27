@@ -4,24 +4,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subjectSelect = document.getElementById("subject-select");
     const unitSelect = document.getElementById("unit-select");
     const qCountInput = document.getElementById("question-count");
-    const startBtn = document.getElementById("start-btn");
+    const showIntroBtn = document.getElementById("show-intro-btn");
+    const startBattleBtn = document.getElementById("start-battle-btn");
     
     const menuArea = document.getElementById("menu-area");
-    const introArea = document.getElementById("intro-area");
-    const introText = document.getElementById("intro-text");
-    const battleStartBtn = document.getElementById("battle-start-btn");
-    
+    const localIntroArea = document.getElementById("local-intro-area");
+    const localIntroText = document.getElementById("local-intro-text");
     const quizArea = document.getElementById("quiz-area");
     const errorBox = document.getElementById("error-box");
 
     let masterData = null; 
-
-    // 🎮 バトル・クイズ管理用の変数
     let currentQuestionNum = 1; 
     let maxQuestions = 3;       
     let currentMonster = null;  
     let monsterHP = 100;        
-    let quizPackage = [];       // ★ここにGeminiから一括で届いた全問題を保管する
+    let quizPackage = [];       
 
     const apiKey = window.GEMINI_API_KEY;
 
@@ -35,11 +32,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // 🔄 連動ギミック
+    // 🔄 連動ギミック①：学年 ➔ 教科
     gradeSelect.addEventListener("change", () => {
         subjectSelect.innerHTML = '<option value="">-- きょうかを えらんでね --</option>';
         unitSelect.innerHTML = '<option value="">-- きょうかを えらんでね --</option>';
-        unitSelect.disabled = true; startBtn.disabled = true;
+        unitSelect.disabled = true; resetMenuButtons();
         const selectedGrade = gradeSelect.value;
         if (!selectedGrade || !masterData.grades[selectedGrade]) { subjectSelect.disabled = true; return; }
         Object.keys(masterData.grades[selectedGrade]).forEach(sub => {
@@ -48,9 +45,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         subjectSelect.disabled = false;
     });
 
+    // 🔄 連動ギミック②：教科 ➔ 単元
     subjectSelect.addEventListener("change", () => {
         unitSelect.innerHTML = '<option value="">-- たんげんを えらんでね --</option>';
-        startBtn.disabled = true;
+        resetMenuButtons();
         const selectedGrade = gradeSelect.value; const selectedSubject = subjectSelect.value;
         if (!selectedSubject) { unitSelect.disabled = true; return; }
         masterData.grades[selectedGrade][selectedSubject].forEach((u, index) => {
@@ -59,117 +57,88 @@ document.addEventListener("DOMContentLoaded", async () => {
         unitSelect.disabled = false;
     });
 
+    // 🔄 連動ギミック③：単元選択でボタン解禁
     unitSelect.addEventListener("change", () => {
         const selectedGrade = gradeSelect.value; const selectedSubject = subjectSelect.value; const unitIndex = unitSelect.value;
-        if (!unitIndex) { startBtn.disabled = true; return; }
+        if (!unitIndex) { resetMenuButtons(); return; }
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitIndex];
         qCountInput.value = unitData.defaultQuestions;
-        startBtn.disabled = false;
+        
+        // 2つのボタンを同時アンロック！
+        showIntroBtn.disabled = false;
+        startBattleBtn.disabled = false;
     });
 
+    function resetMenuButtons() {
+        showIntroBtn.disabled = true;
+        startBattleBtn.disabled = true;
+        localIntroArea.style.display = "none";
+    }
+
     // ==========================================
-    // 📖 処理①：単元の「解説」を生成する
+    // 📖 選択肢A：手元のデータから解説を一瞬で開閉する
     // ==========================================
-    startBtn.addEventListener("click", async () => {
-        errorBox.style.display = "none";
-        if (!apiKey) { showError("APIキーが設定されていません。"); return; }
-
-        const selectedGrade = gradeSelect.value;
-        const selectedSubject = subjectSelect.value;
-        const unitData = masterData.grades[selectedGrade][selectedSubject][unitSelect.value];
-        maxQuestions = parseInt(qCountInput.value) || 3; 
-
-        startBtn.innerText = "せんせいをお呼びしています...";
-        startBtn.disabled = true;
-
-        try {
-            const prompt = `あなたは世界一優しい小学校の先生です。${selectedGrade}の${selectedSubject}における、単元「${unitData.unit}」について、これからバトルに挑む子どもに向けて、分かりやすい「考え方のコツ」や「ルール」を教える解説文を200文字程度で作成してください。
-【絶対に守るルール】:
-1. 漢字は${selectedGrade}で習うものだけを使い、できるだけ「ひらがな」「カタカナ」を多くしてください。
-2. 普通の文章（テキスト）としてそのまま返答してください。`;
-
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(geminiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            if (!response.ok) throw new Error(`通信エラー (${response.status})`);
-            const resData = await response.json();
-            
-            menuArea.style.display = "none";
-            introText.innerText = resData.candidates[0].content.parts[0].text.trim();
-            introArea.style.display = "block";
-
-        } catch (error) {
-            showError(`おべんきょうの じゅんびに しっぱいしちゃったみたい。\n${error.message}`);
-            startBtn.innerText = "ぼうけんに でかける！";
-            startBtn.disabled = false;
+    showIntroBtn.addEventListener("click", () => {
+        if (localIntroArea.style.display === "block") {
+            localIntroArea.style.display = "none";
+        } else {
+            const selectedGrade = gradeSelect.value;
+            const selectedSubject = subjectSelect.value;
+            const unitData = masterData.grades[selectedGrade][selectedSubject][unitSelect.value];
+            localIntroText.innerText = unitData.intro || "みんなで たのしく クイズに いどもう！";
+            localIntroArea.style.display = "block";
         }
     });
 
     // ==========================================
-    // 👾 処理②：解説が終わり「いざバトル開始！」（ここで一括生成！）
+    // ⚔️ 選択肢B：解説を無視して直接バトルへ！（一括取得）
     // ==========================================
-    battleStartBtn.addEventListener("click", async () => {
-        introArea.style.display = "none";
-        quizArea.style.display = "block";
-        
+    startBattleBtn.addEventListener("click", async () => {
+        errorBox.style.display = "none";
+        if (!apiKey) { showError("APIキーが設定されていません。"); return; }
+
+        maxQuestions = parseInt(qCountInput.value) || 3; 
         currentQuestionNum = 1; 
         monsterHP = 100;
         currentMonster = masterData.monsters[Math.floor(Math.random() * masterData.monsters.length)];
         
-        // まずバトル画面の「枠」だけ表示してローカル表示にする
+        menuArea.style.display = "none";
+        quizArea.style.display = "block";
         quizArea.innerHTML = `
             <div id="quiz-loading-text" style="font-weight: bold; color: #2c3e50; text-align: center; padding: 40px; font-size: 20px;">
                 ⚡ ${currentMonster.name} が あらわれた！<br>
-                <span style="font-size:16px; color:#7f8c8d;">（AIが いっしょに あそぶ もんだいを まとめて じゅんび中だよ...）</span>
+                <span style="font-size:16px; color:#7f8c8d;">（AIが クイズを まとめて よういしているよ...）</span>
             </div>
         `;
 
-        // 🧠 ★ここで指定された問題数を「一括でまとめて」Geminiから召喚する！
+        // 🧠 プロンプトを極限まで削った超軽量APIリクエスト
         const success = await loadAllQuizzesAtOnce();
-        if (!success) return; // 失敗時はエラー表示が出ているので抜ける
+        if (!success) {
+            menuArea.style.display = "block";
+            quizArea.style.display = "none";
+            return;
+        }
 
-        // 画面の本格レイアウトを設置
         setupBattleUI();
-        
-        // すでに手元にある1問目を表示（通信なしなので一瞬で出ます！）
         displayCurrentQuiz();
     });
 
-    // 🧠 新機能：全問題を一括で取得する関数
+    // 🧠 爆速・軽量化した一括取得関数
     async function loadAllQuizzesAtOnce() {
         const selectedGrade = gradeSelect.value;
         const selectedSubject = subjectSelect.value;
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitSelect.value];
         const isChoiceMode = unitData.type === "choice";
 
-        let prompt = `あなたは優秀な小学校の先生です。${selectedGrade}の${selectedSubject}、単元「${unitData.unit}」に関する問題を【絶対に${maxQuestions}問ぴったり】作成し、1つのJSON配列にして返してください。
-子どもが1人で読めるように、問題文はひらがな・カタカナを多くし、難しい漢字にはひらがなで括弧書きのルビ（例：漢字（かんじ））を振ってください。
+        let prompt = `小学校${selectedGrade}の${selectedSubject}（単元:${unitData.unit}）の問題を【${maxQuestions}問】作成し、以下のJSON配列のみで返してください。余計な解説文や\`\`\`jsonなどのマークダウンは一切含めないこと。
+漢字には必ずひらがなでルビを振ってください（例：漢字（かんじ））。
 
 `;
 
         if (isChoiceMode) {
-            prompt += `出題形式はすべて【4択問題】です。以下の正確な配列JSONフォーマットのみで返答してください。マークダウンの\`\`\`jsonなどは一切含めないでください。
-[
-  {
-    "question": "1問目の問題文",
-    "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
-    "answer": "正解の選択肢"
-  },
-  ...これを${maxQuestions}問分ループ
-]`;
+            prompt += `[{"question": "問題文","choices": ["選1", "選2", "選3", "選4"],"answer": "正解の選択肢"}]`;
         } else {
-            prompt += `出題形式はすべて【キーボード入力問題】です。答え（answer）は「半角数字のみ」または「短いひらがなのみ」の1単語にしてください。以下の正確な配列JSONフォーマットのみで返答してください。
-[
-  {
-    "question": "1問目の問題文",
-    "answer": "正確な正解の文字列"
-  },
-  ...これを${maxQuestions}問分ループ
-]`;
+            prompt += `[{"question": "問題文","answer": "半角数字またはひらがな1単語の正解"}]`;
         }
 
         try {
@@ -180,17 +149,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
 
-            if (!response.ok) throw new Error("API一括通信エラー");
+            if (!response.ok) {
+                if (response.status === 429) throw new Error("Googleの利用制限（429）にかかりました。1分ほど待ってからもう一度お試しください。");
+                throw new Error(`通信エラー (${response.status})`);
+            }
+            
             const resData = await response.json();
             const rawText = resData.candidates[0].content.parts[0].text.trim();
             const cleanText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
             
-            // 全問のデータを配列としてグローバルに保存！
             quizPackage = JSON.parse(cleanText);
             return true;
 
         } catch (error) {
-            showError(`もんだいの まとめてしょうかんに しっぱいしました。\n${error.message}`);
+            showError(`おべんきょうの じゅんびに しっぱいしちゃったみたい。\n【エラー理由】: ${error.message}`);
             return false;
         }
     }
@@ -199,7 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         quizArea.innerHTML = `
             <div style="background: #34495e; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between;">
                 <span id="battle-stage-title">第 ${currentQuestionNum} / ${maxQuestions} 問</span>
-                <span>属性: ${currentMonster.element}</span>
             </div>
             <h3 style="margin: 0 0 5px 0; color: #2c3e50;">👿 ${currentMonster.name}</h3>
             
@@ -213,16 +184,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
     }
 
-    // ⚡ 手元（メモリ内）に溜めてある問題を取り出して一瞬で画面表示する関数
     function displayCurrentQuiz() {
         document.getElementById("effect-overlay").style.display = "none";
         document.getElementById("battle-stage-title").innerText = `第 ${currentQuestionNum} / ${maxQuestions} 問`;
         
-        // 配列から「現在の問題番号（インデックスは-1）」のデータをもぎ取る
         const currentQuiz = quizPackage[currentQuestionNum - 1];
+        if (!currentQuiz) { showError("クイズデータの読み込みに失敗しました。最初からお試しください。"); return; }
         
         document.getElementById("battle-quiz-text").innerText = currentQuiz.question;
-        
         const inputArea = document.getElementById("battle-input-area");
         inputArea.innerHTML = "";
         document.getElementById("battle-input-area").style.pointerEvents = "auto";
@@ -253,7 +222,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // 🎯 答え合わせ
     function checkAnswer(userAnswer, correctName) {
         document.getElementById("battle-input-area").style.pointerEvents = "none";
         const effectOverlay = document.getElementById("effect-overlay");
@@ -282,10 +250,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (currentQuestionNum > maxQuestions) {
                 showResultScreen();
             } else {
-                // ★通信を挟まないので、次の瞬間（0秒）に2問目がパッと出ます！
                 displayCurrentQuiz();
             }
-        }, 3000); // 演出時間はじっくり3秒キープ
+        }, 3000); 
     }
 
     function showResultScreen() {
