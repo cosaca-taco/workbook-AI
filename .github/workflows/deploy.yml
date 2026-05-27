@@ -24,14 +24,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-# 新しいコード（環境変数を使って、ログに1文字も出さずに裏側でファイルを生成します！）
+      # 🔒 ログにキーを漏らさず、安全にファイルを自動生成する正しいコマンド
       - name: Create Env Script
         env:
           MY_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          echo "window.GEMINI_API_KEY='${MY_GEMINI_KEY}';" > ./public/env.js';" > ./public/env.js
+          echo "window.GEMINI_API_KEY='${MY_GEMINI_KEY}';" > ./public/env.js
 
-      # 自動生成した env.js を index.html に自動で読み込ませる加工（GoogleのAIを刺激しません）
       - name: Inject script tag to HTML
         run: |
           sed -i 's|<script src="app.js"></script>|<script src="env.js"></script><script src="app.js"></script>|g' ./public/index.html
@@ -42,7 +41,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './public' # publicフォルダだけを切り取って公開
+          path: './public'
 
       - name: Deploy to GitHub Pages
         id: deployment
