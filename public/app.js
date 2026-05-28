@@ -21,7 +21,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 🌐 FirebaseのURLと、GitHub Actionsから埋め込まれるAPIキーをセット
     const dbUrl = window.FIREBASE_DB_URL;
-    const apiKey = window.GEMINI_API_KEY;
+//  修正後：GitHub Pagesのシステム環境、または直接埋め込みに対応
+    const apiKey = window.GEMINI_API_KEY || "{{ secrets.GEMINI_API_KEY }}";
 
     // 🌟 固定のモンスターリスト（ここだけプログラム内に保持して最速化）
     const monstersList = [
