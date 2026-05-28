@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【管理者用】問題＆解説エディタ</title>
+    <script src="env.js"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #2c3e50; color: #ecf0f1; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: #34495e; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; }
+        h1 { text-align: center; color: #3498db; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; color: #bdc3c7; }
+        input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #7f8c8d; background: #2c3e50; color: white; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 100px; resize: vertical; }
+        button { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #27ae60; }
+        .status { padding: 10px; border-radius: 6px; margin-top: 20px; font-weight: bold; text-align: center; display: none; }
+        .success { background: #27ae60; color: white; }
+        .error { background: #c0392b; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🛠️ データ管理エディタ </h1>
+        <p style="text-align:center; color:#cbd5e1; margin-top:-20px; margin-bottom:30px;">Firebaseにリアルタイムで単元を追加します</p>
+
+        <div class="form-group">
+            <label>① 対象の学年</label>
+            <select id="admin-grade">
+                <option value="小学1年生">小学1年生</option>
+                <option value="小学2年生">小学2年生</option>
+                <option value="小学3年生">小学3年生</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>② 教科（例：算数、国語）</label>
+            <input type="text" id="admin-subject" placeholder="算数" value="算数">
+        </div>
+
+        <div class="form-group">
+            <label>③ 新しい単元名</label>
+            <input type="text" id="admin-unit" placeholder="ひきざん（くりさがりなし）">
+        </div>
+
+        <div class="form-group">
+            <label>④ 出題形式（子どもへの出題タイプ）</label>
+            <select id="admin-type">
+                <option value="choice">4択問題（ボタンを選択）</option>
+                <option value="input">記述問題（キーボードで数字や文字を入力）</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>⑤ おすすめ問題数（デフォルト値）</label>
+            <input type="number" id="admin-count" min="1" max="10" value="3">
+        </div>
+
+        <div class="form-group">
+            <label>⑥ お父様手作りの「解説・アドバイス文」</label>
+            <textarea id="admin-intro" placeholder="ここに子どものモチベーションが上がる解説やコツを書いてあげてください。"></textarea>
+        </div>
+
+        <button id="save-btn">💾 Firebaseへ保存する</button>
+
+        <div id="status-box" class="status"></div>
+    </div>
+
+    <script>
+        document.getElementById("save-btn").addEventListener("click", async () => {
+            const statusBox = document.getElementById("status-box");
+            statusBox.style.display = "none";
+
+            const grade = document.getElementById("admin-grade").value;
+            const subject = document.getElementById("admin-subject").value.trim();
+            const unitName = document.getElementById("admin-unit").value.trim();
+            const type = document.getElementById("admin-type").value;
+            const count = parseInt(document.getElementById("admin-count").value) || 3;
+            const intro = document.getElementById("admin-intro").value.trim();
+
+            if (!subject || !unitName || !intro) {
+                showStatus("すべての項目を入力してください！", "error");
+                return;
+            }
+
+            const dbUrl = window.FIREBASE_DB_URL;
+            if (!dbUrl || dbUrl.includes("あなたのプロジェクト名")) {
+                showStatus("env.js の FIREBASE_DB_URL が正しく設定されていません。", "error");
+                return;
+            }
+
+            document.getElementById("save-btn").innerText = "通信中...";
+            document.getElementById("save-btn").disabled = true;
+
+            try {
+                // 💡 安全対策：現在のデータを一度ダウンロードして、配列の末尾に追加する形式をとる
+                const fetchUrl = `${dbUrl}grades/${grade}/${subject}.json`;
+                const response = await fetch(fetchUrl);
+                let currentUnits = [];
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data)) currentUnits = data;
+                }
+
+                // 新しい単元オブジェクトを作成
+                const newUnitData = {
+                    unit: unitName,
+                    defaultQuestions: count,
+                    type: type,
+                    intro: intro
+                };
+
+                // 既存のリストの最後にガッチャンコ
+                currentUnits.push(newUnitData);
+
+                // Firebaseへ上書き送信（PUTリクエスト）
+                const saveResponse = await fetch(fetchUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(currentUnits)
+                });
+
+                if (!saveResponse.ok) throw new Error("Firebaseへの書き込みに失敗しました。");
+
+                showStatus(`🎉 「${unitName}」を無事に登録しました！`, "success");
+                
+                // 入力欄をクリア（次を入力しやすくする）
+                document.getElementById("admin-unit").value = "";
+                document.getElementById("admin-intro").value = "";
+
+            } catch (error) {
+                showStatus(`エラーが発生しました: ${error.message}`, "error");
+            } finally {
+                document.getElementById("save-btn").innerText = "💾 Firebaseへ保存する";
+                document.getElementById("save-btn").disabled = false;
+            }
+        });
+
+        function showStatus(msg, type) {
+            const statusBox = document.getElementById("status-box");
+            statusBox.innerText = msg;
+            statusBox.className = `status ${type}`;
+            statusBox.style.display = "block";
+        }
+    </script>
+</body>
+</html>

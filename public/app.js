@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // 画面のパーツを取得
     const gradeSelect = document.getElementById("grade-select");
     const subjectSelect = document.getElementById("subject-select");
     const unitSelect = document.getElementById("unit-select");
@@ -20,15 +19,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     let monsterHP = 100;        
     let quizPackage = [];       
 
+    // 🌐 FirebaseのURLと、GitHub Actionsから埋め込まれるAPIキーをセット
+    const dbUrl = window.FIREBASE_DB_URL;
     const apiKey = window.GEMINI_API_KEY;
 
-    // 1. database.json の読み込み
+    // 🌟 固定のモンスターリスト（ここだけプログラム内に保持して最速化）
+    const monstersList = [
+        { "element": "ほのお", "name": "タスザンリオン" },
+        { "element": "みず", "name": "ヒキザンペンギン" },
+        { "element": "かみなり", "name": "カケザンウルフ" }
+    ];
+
+    // ==========================================
+    // 🌐 処理⓪：起動時にFirebaseから全設定データを一括ダウンロード
+    // ==========================================
     try {
-        const response = await fetch("./database.json");
-        if (!response.ok) throw new Error("database.jsonの読み込みに失敗しました。");
+        if (!dbUrl || dbUrl.includes("あなたのプロジェクト名")) {
+            throw new Error("env.js の FIREBASE_DB_URL が正しく設定されていません。");
+        }
+        
+        // ローカルのファイルではなく、Firebaseの「.json」エンドポイントを叩く！
+        const response = await fetch(`${dbUrl}.json`);
+        if (!response.ok) throw new Error("Firebaseからのデータ取得に失敗しました。");
+        
         masterData = await response.json();
+        
+        // 万が一Firebaseが完全に空っぽ（インポート前）だった場合の安全装置
+        if (!masterData || !masterData.grades) {
+            throw new Error("Firebaseの中に『grades』のデータが見つかりません。JSONインポートを完了させてください。");
+        }
     } catch (error) {
-        showError(`設定データのよみこみに しっぱいしました: ${error.message}`);
+        showError(`データベースとの つながりに しっぱいしました:\n${error.message}`);
         return;
     }
 
@@ -38,7 +59,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         unitSelect.innerHTML = '<option value="">-- きょうかを えらんでね --</option>';
         unitSelect.disabled = true; resetMenuButtons();
         const selectedGrade = gradeSelect.value;
+        
         if (!selectedGrade || !masterData.grades[selectedGrade]) { subjectSelect.disabled = true; return; }
+        
         Object.keys(masterData.grades[selectedGrade]).forEach(sub => {
             const opt = document.createElement("option"); opt.value = sub; opt.innerText = sub; subjectSelect.appendChild(opt);
         });
@@ -51,6 +74,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         resetMenuButtons();
         const selectedGrade = gradeSelect.value; const selectedSubject = subjectSelect.value;
         if (!selectedSubject) { unitSelect.disabled = true; return; }
+        
         masterData.grades[selectedGrade][selectedSubject].forEach((u, index) => {
             const opt = document.createElement("option"); opt.value = index; opt.innerText = u.unit; unitSelect.appendChild(opt);
         });
@@ -64,7 +88,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitIndex];
         qCountInput.value = unitData.defaultQuestions;
         
-        // 2つのボタンを同時アンロック！
         showIntroBtn.disabled = false;
         startBattleBtn.disabled = false;
     });
@@ -76,7 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ==========================================
-    // 📖 選択肢A：手元のデータから解説を一瞬で開閉する
+    // 📖 選択肢A：Firebaseから引っ張ってきた自作解説を一瞬で開閉する
     // ==========================================
     showIntroBtn.addEventListener("click", () => {
         if (localIntroArea.style.display === "block") {
@@ -91,16 +114,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ==========================================
-    // ⚔️ 選択肢B：解説を無視して直接バトルへ！（一括取得）
+    // ⚔️ 選択肢B：直接バトルへ！（AIから最軽量JSONを一括取得）
     // ==========================================
     startBattleBtn.addEventListener("click", async () => {
         errorBox.style.display = "none";
-        if (!apiKey) { showError("APIキーが設定されていません。"); return; }
+        if (!apiKey) { showError("APIキーが設定されていません。（GitHubの本番金庫をご確認ください）"); return; }
 
         maxQuestions = parseInt(qCountInput.value) || 3; 
         currentQuestionNum = 1; 
         monsterHP = 100;
-        currentMonster = masterData.monsters[Math.floor(Math.random() * masterData.monsters.length)];
+        currentMonster = monstersList[Math.floor(Math.random() * monstersList.length)];
         
         menuArea.style.display = "none";
         quizArea.style.display = "block";
@@ -111,7 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
         `;
 
-        // 🧠 プロンプトを極限まで削った超軽量APIリクエスト
         const success = await loadAllQuizzesAtOnce();
         if (!success) {
             menuArea.style.display = "block";
@@ -123,14 +145,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         displayCurrentQuiz();
     });
 
-    // 🧠 爆速・軽量化した一括取得関数
     async function loadAllQuizzesAtOnce() {
         const selectedGrade = gradeSelect.value;
         const selectedSubject = subjectSelect.value;
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitSelect.value];
         const isChoiceMode = unitData.type === "choice";
 
-        let prompt = `小学校${selectedGrade}の${selectedSubject}（単元:${unitData.unit}）の問題を【${maxQuestions}問】作成し、以下のJSON配列のみで返してください。余計な解説文や\`\`\`jsonなどのマークダウンは一切含めないこと。
+        let prompt = `小学校${selectedGrade}の${selectedSubject}（単元:${unitData.unit}）の問題を【${maxQuestions}問】作成し、以下のJSON配列のみで返してください。余計な説明文やマークダウンの\`\`\`jsonなどは絶対に含めないでください。
 漢字には必ずひらがなでルビを振ってください（例：漢字（かんじ））。
 
 `;
