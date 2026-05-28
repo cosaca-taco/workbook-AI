@@ -18,17 +18,17 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps:deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 💡 ここを大改造！ GitHub Pages公開時に、URLとAPIキーを正しい形に自動合成します
+      # 💡 コロンなどの記号を安全に処理するために、シングルクォーテーションで全体を囲う安全な形に直しました
       - name: Create env.js dynamically
         run: |
-          echo 'window.FIREBASE_DB_URL = "https://workbook-ai-taco-default-rtdb.asia-southeast1.firebasedatabase.app/";' > public/env.js
-          echo 'window.GEMINI_API_KEY = "${{ secrets.GEMINI_API_KEY }}";' >> public/env.js
+          echo "window.FIREBASE_DB_URL = 'https://workbook-ai-taco-default-rtdb.asia-southeast1.firebasedatabase.app/';" > public/env.js
+          echo "window.GEMINI_API_KEY = '${{ secrets.GEMINI_API_KEY }}';" >> public/env.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
