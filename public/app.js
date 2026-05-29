@@ -88,17 +88,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ==========================================
     // 🔑 ログイン・ログアウト処理
     // ==========================================
+// ==========================================
+    // 🔑 ログイン処理用の関数（Authenticationを通さないシンプル版）
+    // ==========================================
     window.loginAsUser = async function(name, avatar) {
-        try {
-            const userCredential = await firebase.auth().signInAnonymously();
-            window.currentUser = { name: name, avatar: avatar, uid: userCredential.user.uid };
-            loginArea.style.display = "none";
-            registerArea.style.display = "none";
-            menuArea.style.display = "block";
-            document.getElementById("current-player-display").innerText = `${avatar} ${name}`;
-        } catch (error) {
-            alert("ログインに失敗しました。");
-        }
+        // 面倒な通信をスキップして、直接ログイン成功状態にする！
+        window.currentUser = {
+            name: name,
+            avatar: avatar,
+            uid: "user_" + name // 名前をベースに簡易IDを作る
+        };
+
+        // 画面の切り替え
+        loginArea.style.display = "none";
+        registerArea.style.display = "none";
+        menuArea.style.display = "block";
+        document.getElementById("current-player-display").innerText = `${avatar} ${name}`;
     };
 
     window.logout = async function() {
