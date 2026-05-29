@@ -4,12 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI学習ドリル・モンスターズ</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="env.js"></script>
     <script src="app.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; margin-bottom: 25px; }
+        
+        /* 🔑 ログイン・ユーザー選択画面のスタイル */
+        .login-box { display: block; padding: 20px; }
+        .user-grid { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
+        .user-card { background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px; padding: 15px; width: 120px; cursor: pointer; transition: all 0.2s; }
+        .user-card:hover { border-color: #3498db; background: #eaf2f8; transform: translateY(-3px); }
+        .user-avatar { font-size: 40px; margin-bottom: 5px; }
+        .user-name { font-weight: bold; color: #334155; }
+
+        /* 🛠️ 設定メニューエリア（ログイン後に表示） */
+        #menu-area { display: none; }
+        .player-info-bar { background: #e2e8f0; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        
         .setup-group { margin: 15px 0; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         label { font-weight: bold; color: #4a5568; display: block; margin-bottom: 5px; }
         select, input, button { font-size: 16px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
@@ -30,7 +45,26 @@
     <div class="container">
         <h1>👾 AI学習ドリル・モンスターズ 👾</h1>
         
+        <div id="login-area" class="login-box">
+            <h2>👤 だれが ぼうけんする？</h2>
+            <div class="user-grid">
+                <div class="user-card" onclick="loginAsUser('おにいちゃん', '👦')">
+                    <div class="user-avatar">👦</div>
+                    <div class="user-name">おにいちゃん</div>
+                </div>
+                <div class="user-card" onclick="loginAsUser('いもうと', '👧')">
+                    <div class="user-avatar">👧</div>
+                    <div class="user-name">いもうと</div>
+                </div>
+            </div>
+        </div>
+
         <div id="menu-area">
+            <div class="player-info-bar">
+                <span>プレイヤー: <span id="current-player-display">---</span></span>
+                <button onclick="logout()" style="width:auto; padding:3px 10px; font-size:12px; background:#7f8c8d; color:white; border:none; margin:0;">こうたいする</button>
+            </div>
+
             <div class="setup-group">
                 <label>① がくねんを えらぼう</label>
                 <select id="grade-select">
