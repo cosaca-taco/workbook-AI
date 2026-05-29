@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【管理者用】問題＆解説エディタ（修正・削除機能付き）</title>
+    <title>【管理者用】問題＆解説エディタ（動画URL対応版）</title>
     <script src="env.js"></script>
     <style>
         body { font-family: sans-serif; background-color: #2c3e50; color: #ecf0f1; padding: 20px; }
@@ -15,13 +15,9 @@
         label { font-weight: bold; display: block; margin-bottom: 5px; color: #bdc3c7; }
         input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #7f8c8d; background: #2c3e50; color: white; box-sizing: border-box; font-size: 16px; }
         textarea { height: 80px; resize: vertical; }
-        
-        /* 💾 ボタンのスタイル */
         button { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #27ae60; }
         button:disabled { background: #7f8c8d !important; cursor: not-allowed; }
-        
-        /* 📜 リスト＆操作ボタンのスタイル */
         .list-container { max-height: 550px; overflow-y: auto; padding-right: 10px; }
         .grade-section { margin-bottom: 20px; background: #2c3e50; padding: 15px; border-radius: 8px; }
         .grade-title { font-size: 18px; font-weight: bold; color: #f1c40f; margin: 0 0 10px 0; border-left: 4px solid #f1c40f; padding-left: 8px; }
@@ -30,20 +26,15 @@
         .unit-item { background: #34495e; padding: 10px; border-radius: 6px; margin: 5px 0 10px 15px; border-left: 3px solid #3498db; }
         .unit-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; color: #ecf0f1; align-items: center; }
         .unit-type { font-size: 11px; background: #3498db; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
-        .unit-type.input-type { background: #9b59b6; }
         .unit-intro { font-size: 13px; color: #bdc3c7; margin: 5px 0; background: rgba(0,0,0,0.1); padding: 6px; border-radius: 4px; white-space: pre-wrap; }
-        
-        /* 🛠️ 編集・削除用インラインボタン */
+        .unit-video { font-size: 12px; color: #3498db; margin-top: 5px; text-decoration: underline; word-break: break-all; }
         .action-btns { display: flex; gap: 5px; margin-top: 5px; justify-content: flex-end; }
         .action-btns button { width: auto; padding: 4px 10px; font-size: 12px; margin: 0; border-radius: 4px; }
         .edit-btn { background: #f39c12; }
         .edit-btn:hover { background: #d35400; }
         .delete-btn { background: #e74c3c; }
         .delete-btn:hover { background: #c0392b; }
-        
-        /* 🚨 編集モード中のアピール枠 */
         .edit-mode-active { border: 2px solid #f39c12 !important; background: #3d566e !important; }
-        
         .status { padding: 10px; border-radius: 6px; margin-top: 15px; font-weight: bold; text-align: center; display: none; }
         .success { background: #27ae60; color: white; }
         .error { background: #c0392b; color: white; }
@@ -65,17 +56,14 @@
                     <option value="小学3年生">小学3年生</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label>② 教科（例：算数、国語）</label>
                 <input type="text" id="admin-subject" placeholder="算数" value="算数">
             </div>
-
             <div class="form-group">
                 <label>③ 単元名</label>
                 <input type="text" id="admin-unit" placeholder="ひきざん（くりさがりなし）">
             </div>
-
             <div class="form-group">
                 <label>④ 出題形式</label>
                 <select id="admin-type">
@@ -83,15 +71,17 @@
                     <option value="input">記述問題（キーボード入力）</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label>⑤ おすすめ問題数</label>
                 <input type="number" id="admin-count" min="1" max="10" value="3">
             </div>
-
             <div class="form-group">
                 <label>⑥ お父様手作りの「解説・アドバイス文」</label>
                 <textarea id="admin-intro" placeholder="ここにコツを書いてあげてください。"></textarea>
+            </div>
+            <div class="form-group">
+                <label>⑦ 解説動画のURL（YouTubeなど、空っぽでもOK）</label>
+                <input type="url" id="admin-video" placeholder="https://www.youtube.com/watch?v=...">
             </div>
 
             <button id="save-btn">💾 Firebaseへ保存する</button>
@@ -107,43 +97,31 @@
     </div>
 
     <script>
-        // 現在「編集モード」で選択している単元のインデックスを記憶する変数（nullなら新規登録）
         let editingIndex = null;
-        let globalGradesData = null; // ローカルに保持するキャッシュデータ
+        let globalGradesData = null;
 
-        // 🚀 起動時・データ変更時にツリーリストを再描画する関数
         async function refreshDataList() {
             const container = document.getElementById("data-list-container");
             const loadingText = document.getElementById("list-loading");
             const dbUrl = window.FIREBASE_DB_URL;
 
-            if (!dbUrl || dbUrl.includes("あなたのプロジェクト名")) {
-                loadingText.innerText = "URLが未設定のためリストを読み込めません。";
-                return;
-            }
-
             try {
                 const response = await fetch(`${dbUrl}grades.json`);
-                if (!response.ok) throw new Error();
                 globalGradesData = await response.json();
-
                 loadingText.style.display = "none";
                 container.innerHTML = "";
 
                 if (!globalGradesData) {
-                    container.innerHTML = "<p style='text-align:center; color:#cbd5e1;'>まだ登録されているデータはありません。</p>";
+                    container.innerHTML = "<p style='text-align:center; color:#cbd5e1;'>まだデータはありません。</p>";
                     return;
                 }
 
-                // 学年ループ
                 Object.keys(globalGradesData).sort().forEach(gradeName => {
                     const gradeBox = document.createElement("div");
                     gradeBox.className = "grade-section";
                     gradeBox.innerHTML = `<div class="grade-title">📁 ${gradeName}</div>`;
-
                     const subjectsData = globalGradesData[gradeName];
                     
-                    // 教科ループ
                     Object.keys(subjectsData).forEach(subjectName => {
                         const subjectBox = document.createElement("div");
                         subjectBox.className = "subject-section";
@@ -152,21 +130,21 @@
                         const unitsList = subjectsData[subjectName];
                         if (Array.isArray(unitsList)) {
                             unitsList.forEach((unitData, index) => {
-                                if (!unitData) return; // 削除済みの空要素はスキップ
-
+                                if (!unitData) return;
                                 const typeText = unitData.type === "choice" ? "4択" : "入力";
-                                const typeClass = unitData.type === "choice" ? "" : "input-type";
+                                const videoText = unitData.videoUrl ? `<div class="unit-video">🎥 動画URLあり</div>` : "";
 
                                 const unitItem = document.createElement("div");
                                 unitItem.className = "unit-item";
                                 unitItem.innerHTML = `
                                     <div class="unit-header">
                                         <span>📝 ${unitData.unit} (${unitData.defaultQuestions}問)</span>
-                                        <span class="unit-type ${typeClass}">${typeText}</span>
+                                        <span class="unit-type">${typeText}</span>
                                     </div>
                                     <div class="unit-intro">${unitData.intro || "（解説なし）"}</div>
+                                    ${videoText}
                                     <div class="action-btns">
-                                        <button class="edit-btn" onclick="startEdit('${gradeName}', '${subjectName}', ${index})">✏️ 修正する</button>
+                                        <button class="edit-btn" onclick="startEdit('${gradeName}', '${subjectName}', ${index})">✏️ 修正</button>
                                         <button class="delete-btn" onclick="deleteUnit('${gradeName}', '${subjectName}', ${index})">🗑️ 削除</button>
                                     </div>
                                 `;
@@ -177,39 +155,30 @@
                     });
                     container.appendChild(gradeBox);
                 });
-
             } catch (error) {
                 loadingText.innerText = "データの読み込みに失敗しました。";
             }
         }
 
-        // ✏️ 修正モードを開始する処理（ボタンクリックで発動）
         window.startEdit = function(grade, subject, index) {
             const unitData = globalGradesData[grade][subject][index];
-            editingIndex = index; // 修正対象の配列番号をキープ
-
-            // 左側の入力フォームに、選んだデータを一瞬で流し込む
+            editingIndex = index;
             document.getElementById("admin-grade").value = grade;
             document.getElementById("admin-subject").value = subject;
             document.getElementById("admin-unit").value = unitData.unit;
             document.getElementById("admin-type").value = unitData.type;
             document.getElementById("admin-count").value = unitData.defaultQuestions;
             document.getElementById("admin-intro").value = unitData.intro || "";
+            document.getElementById("admin-video").value = unitData.videoUrl || ""; // 動画URLをセット
 
-            // 学年と教科は、修正中にブレると危険なので一時的に編集不可にする
             document.getElementById("admin-grade").disabled = true;
             document.getElementById("admin-subject").disabled = true;
-
-            // フォームの見た目を「修正モード」に変更
             document.getElementById("form-panel").classList.add("edit-mode-active");
             document.getElementById("form-title").innerText = "⚠️ 単元の修正・上書きモード";
             document.getElementById("save-btn").innerText = "🔄 修正内容で上書き保存する";
             document.getElementById("cancel-edit-btn").style.display = "block";
-            
-            document.getElementById("admin-unit").focus();
         };
 
-        // ❌ 修正モードをキャンセルして元に戻す処理
         function cancelEdit() {
             editingIndex = null;
             document.getElementById("admin-grade").disabled = false;
@@ -218,13 +187,12 @@
             document.getElementById("form-title").innerText = "単元の新規登録";
             document.getElementById("save-btn").innerText = "💾 Firebaseへ保存する";
             document.getElementById("cancel-edit-btn").style.display = "none";
-
             document.getElementById("admin-unit").value = "";
             document.getElementById("admin-intro").value = "";
+            document.getElementById("admin-video").value = "";
         }
         document.getElementById("cancel-edit-btn").addEventListener("click", cancelEdit);
 
-        // 💾 保存（新規登録 ＆ 上書き修正 共通）ボタンの処理
         document.getElementById("save-btn").addEventListener("click", async () => {
             const statusBox = document.getElementById("status-box");
             statusBox.style.display = "none";
@@ -235,20 +203,18 @@
             const type = document.getElementById("admin-type").value;
             const count = parseInt(document.getElementById("admin-count").value) || 3;
             const intro = document.getElementById("admin-intro").value.trim();
+            const videoUrl = document.getElementById("admin-video").value.trim(); // 動画URLを取得
 
-            if (!subject || !unitName || !intro) {
-                showStatus("すべての項目を入力してください！", "error");
+            if (!subject || !unitName) {
+                showStatus("学年・教科・単元名は必須です！", "error");
                 return;
             }
 
             const dbUrl = window.FIREBASE_DB_URL;
-            document.getElementById("save-btn").innerText = "通信中...";
             document.getElementById("save-btn").disabled = true;
 
             try {
                 const fetchUrl = `${dbUrl}grades/${grade}/${subject}.json`;
-                
-                // 1. まず現在の配列をFirebaseからダウンロード
                 const response = await fetch(fetchUrl);
                 let currentUnits = [];
                 if (response.ok) {
@@ -260,77 +226,40 @@
                     unit: unitName,
                     defaultQuestions: count,
                     type: type,
-                    intro: intro
+                    intro: intro,
+                    videoUrl: videoUrl // Firebaseに動画URLを一緒に保存！
                 };
 
-                if (editingIndex !== null) {
-                    // 【修正モードの場合】指定された番号の中身を丸ごと上書き！
-                    currentUnits[editingIndex] = newUnitData;
-                } else {
-                    // 【新規登録の場合】配列の末尾に新しく追加！
-                    currentUnits.push(newUnitData);
-                }
+                if (editingIndex !== null) { currentUnits[editingIndex] = newUnitData; } 
+                else { currentUnits.push(newUnitData); }
 
-                // 2. FirebaseへPUTで一括上書き送信
-                const saveResponse = await fetch(fetchUrl, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(currentUnits)
-                });
-
-                if (!saveResponse.ok) throw new Error("Firebaseへの書き込みに失敗しました。");
-
-                showStatus(editingIndex !== null ? "🎉 修正が上書き保存されました！" : "🎉 新しい単元を追加しました！", "success");
-                
-                cancelEdit(); // フォームを通常状態にリセット
-                refreshDataList(); // リストを最新に更新
-
+                await fetch(fetchUrl, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(currentUnits) });
+                showStatus("🎉 保存しました！", "success");
+                cancelEdit();
+                refreshDataList();
             } catch (error) {
-                showStatus(`エラーが発生しました: ${error.message}`, "error");
+                showStatus("エラーが発生しました。", "error");
             } finally {
                 document.getElementById("save-btn").disabled = false;
             }
         });
 
-        // 🗑️ 単元の削除処理
         window.deleteUnit = async function(grade, subject, index) {
-            const unitData = globalGradesData[grade][subject][index];
-            if (!confirm(`本当に「${unitData.unit}」を削除してもよろしいですか？`)) return;
-
+            if (!confirm("本当に削除しますか？")) return;
             const dbUrl = window.FIREBASE_DB_URL;
             try {
-                const fetchUrl = `${dbUrl}grades/${grade}/${subject}.json`;
-                
-                // 配列から該当の単元を綺麗に消去する
                 let currentUnits = globalGradesData[grade][subject];
-                currentUnits.splice(index, 1); // 削除実行
-
-                // 残った配列（空っぽになった場合は空の配列）をFirebaseに送り直す
-                const saveResponse = await fetch(fetchUrl, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(currentUnits)
-                });
-
-                if (!saveResponse.ok) throw new Error();
-                
-                showStatus("🗑️ 単元を削除しました。", "success");
-                cancelEdit();
+                currentUnits.splice(index, 1);
+                await fetch(`${dbUrl}grades/${grade}/${subject}.json`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(currentUnits) });
+                showStatus("🗑️ 削除しました。", "success");
                 refreshDataList();
-
-            } catch (error) {
-                showStatus("削除に失敗しました。", "error");
-            }
+            } catch (error) { showStatus("削除に失敗しました。", "error"); }
         };
 
         function showStatus(msg, type) {
             const statusBox = document.getElementById("status-box");
-            statusBox.innerText = msg;
-            statusBox.className = `status ${type}`;
-            statusBox.style.display = "block";
+            statusBox.innerText = msg; statusBox.className = `status ${type}`; statusBox.style.display = "block";
         }
-
-        // ページを開いた瞬間にリストを表示
         refreshDataList();
     </script>
 </body>

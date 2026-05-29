@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const unitSelect = document.getElementById("unit-select");
     const qCountInput = document.getElementById("question-count");
     const showIntroBtn = document.getElementById("show-intro-btn");
+    const watchVideoBtn = document.getElementById("watch-video-btn"); // 追加！
     const startBattleBtn = document.getElementById("start-battle-btn");
     const localIntroArea = document.getElementById("local-intro-area");
     const localIntroText = document.getElementById("local-intro-text");
@@ -183,14 +184,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         unitSelect.disabled = false;
     });
+
+    // 🌟 単元が選ばれた時の連動ギミック（動画URLの有無をチェック！）
     unitSelect.addEventListener("change", () => {
-        const selectedGrade = gradeSelect.value; const selectedSubject = subjectSelect.value; const unitIndex = unitSelect.value;
+        const selectedGrade = gradeSelect.value; 
+        const selectedSubject = subjectSelect.value; 
+        const unitIndex = unitSelect.value;
+        
         if (!unitIndex) { resetMenuButtons(); return; }
+        
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitIndex];
         qCountInput.value = unitData.defaultQuestions;
-        showIntroBtn.disabled = false; startBattleBtn.disabled = false;
+        
+        // 解説ボタンとバトルボタンをオン
+        showIntroBtn.disabled = false; 
+        startBattleBtn.disabled = false;
+        
+        // 🎥 動画URLが登録されている場合だけ、動画ボタンを有効化する
+        if (unitData.videoUrl && unitData.videoUrl.startsWith("http")) {
+            watchVideoBtn.disabled = false;
+            // ボタンを押したら新しいタブで動画URLを開く
+            watchVideoBtn.onclick = () => {
+                window.open(unitData.videoUrl, "_blank");
+            };
+        } else {
+            watchVideoBtn.disabled = true;
+            watchVideoBtn.onclick = null;
+        }
     });
-    function resetMenuButtons() { showIntroBtn.disabled = true; startBattleBtn.disabled = true; localIntroArea.style.display = "none"; }
+
+    // 🌟 ボタンのリセット処理（動画ボタンも巻き込む）
+    function resetMenuButtons() { 
+        showIntroBtn.disabled = true; 
+        watchVideoBtn.disabled = true; // 追加
+        startBattleBtn.disabled = true; 
+        localIntroArea.style.display = "none"; 
+    }
 
     showIntroBtn.addEventListener("click", () => {
         if (localIntroArea.style.display === "block") { localIntroArea.style.display = "none"; } 
