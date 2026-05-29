@@ -1,12 +1,7 @@
-// 🌐 Firebaseの初期化に必要な設定（Realtime DatabaseのURLからプロジェクトIDを自動抽出）
 function initFirebaseApp() {
     const dbUrl = window.FIREBASE_DB_URL;
     if (!dbUrl || dbUrl.includes("あなたのプロジェクト名")) return false;
-    
-    // URLからプロジェクト名（プロトコルとドメインの間）を自動取得
     const projId = dbUrl.replace("https://", "").split("-default-rtdb")[0];
-    
-    // すでに初期化されていなければ初期化
     if (!firebase.apps.length) {
         firebase.initializeApp({
             apiKey: window.GEMINI_API_KEY || "dummy",
@@ -19,18 +14,20 @@ function initFirebaseApp() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Firebase初期化チェック
     initFirebaseApp();
 
+    const loginArea = document.getElementById("login-area");
+    const registerArea = document.getElementById("register-area");
+    const menuArea = document.getElementById("menu-area");
+    const userListGrid = document.getElementById("user-list-grid");
+    const loadingUsers = document.getElementById("loading-users");
+    
     const gradeSelect = document.getElementById("grade-select");
     const subjectSelect = document.getElementById("subject-select");
     const unitSelect = document.getElementById("unit-select");
     const qCountInput = document.getElementById("question-count");
     const showIntroBtn = document.getElementById("show-intro-btn");
     const startBattleBtn = document.getElementById("start-battle-btn");
-    
-    const loginArea = document.getElementById("login-area");
-    const menuArea = document.getElementById("menu-area");
     const localIntroArea = document.getElementById("local-intro-area");
     const localIntroText = document.getElementById("local-intro-text");
     const quizArea = document.getElementById("quiz-area");
@@ -42,11 +39,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     let currentMonster = null;  
     let monsterHP = 100;        
     let quizPackage = [];       
-    let correctCount = 0; // 📊 今回の正解数を数える変数
+    let correctCount = 0;
+    let selectedAvatarIcon = "👦"; // デフォルトアイコン
 
-    // ログイン中のユーザー情報を保持するオブジェクト
     window.currentUser = { name: "", avatar: "", uid: "" };
-
     const dbUrl = window.FIREBASE_DB_URL;
     const apiKey = window.GEMINI_API_KEY || "{{ secrets.GEMINI_API_KEY }}";
 
@@ -57,49 +53,110 @@ document.addEventListener("DOMContentLoaded", async () => {
     ];
 
     // ==========================================
-    // 🔑 ログイン処理用の関数（HTMLのカードから呼ばれる）
+    // 👤 ユーザー一覧をFirebaseから読み込んで表示する
+    // ==========================================
+    async function loadUserCards() {
+        userListGrid.innerHTML = "";
+        loadingUsers.style.display = "block";
+        try {
+            const res = await fetch(`${dbUrl}users.json`);
+            const usersData = await res.json();
+            loadingUsers.style.display = "none";
+
+            if (!usersData) {
+                userListGrid.innerHTML = "<p style='color:#7f8c8d;'>まだプレイヤーがいません。したのボタンからつくってね！</p>";
+                return;
+            }
+
+            Object.keys(usersData).forEach(key => {
+                const user = usersData[key];
+                const card = document.createElement("div");
+                card.className = "user-card";
+                card.innerHTML = `
+                    <div class="user-avatar">${user.avatar}</div>
+                    <div class="user-name">${user.name}</div>
+                `;
+                // カードを押したらその人としてログイン
+                card.addEventListener("click", () => loginAsUser(user.name, user.avatar));
+                userListGrid.appendChild(card);
+            });
+        } catch (e) {
+            loadingUsers.innerText = "プレイヤーのよみこみにしっぱいしました。";
+        }
+    }
+
+    // ==========================================
+    // 🔑 ログイン・ログアウト処理
     // ==========================================
     window.loginAsUser = async function(name, avatar) {
         try {
-            // Firebaseの匿名認証を実行して、ブラウザ固有の安全なUIDを取得
             const userCredential = await firebase.auth().signInAnonymously();
-            window.currentUser = {
-                name: name,
-                avatar: avatar,
-                uid: userCredential.user.uid
-            };
-
-            // 画面の切り替え
+            window.currentUser = { name: name, avatar: avatar, uid: userCredential.user.uid };
             loginArea.style.display = "none";
+            registerArea.style.display = "none";
             menuArea.style.display = "block";
             document.getElementById("current-player-display").innerText = `${avatar} ${name}`;
         } catch (error) {
-            alert("ログインに失敗しました。FirebaseのAuthentication設定をご確認ください。");
+            alert("ログインに失敗しました。");
         }
     };
 
-    // 🔄 プレイヤー交代（ログアウト）
     window.logout = async function() {
         await firebase.auth().signOut();
         location.reload();
     };
 
     // ==========================================
-    // 🌐 処理：Firebaseから問題設定データをダウンロード
+    // ➕ 新規プレイヤーの登録処理
+    // ==========================================
+    window.selectAvatar = function(avatar) {
+        selectedAvatarIcon = avatar;
+        document.querySelectorAll(".avatar-option").forEach(el => {
+            el.classList.remove("selected");
+            if (el.innerText === avatar) el.classList.add("selected");
+        });
+    };
+    // 初期選択状態にする
+    selectAvatar("👦");
+
+    document.getElementById("submit-register-btn").addEventListener("click", async () => {
+        const nameInput = document.getElementById("new-user-name").value.trim();
+        if (!nameInput) { alert("おなまえを いれてね！"); return; }
+
+        try {
+            // Firebaseの `/users` に保存
+            const newUser = { name: nameInput, avatar: selectedAvatarIcon };
+            const response = await fetch(`${dbUrl}users.json`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newUser)
+            });
+            if (!response.ok) throw new Error();
+
+            // 登録できたらそのままそのユーザーでログイン！
+            loginAsUser(nameInput, selectedAvatarIcon);
+        } catch (e) {
+            alert("登録に失敗しました。");
+        }
+    });
+
+    // 画面切り替えのイベント
+    document.getElementById("go-to-register-btn").addEventListener("click", () => { loginArea.style.display = "none"; registerArea.style.display = "block"; });
+    document.getElementById("go-to-login-btn").addEventListener("click", () => { loginArea.style.display = "block"; registerArea.style.display = "none"; });
+
+    // ==========================================
+    // 🌐 単元データのロード ＆ いつものクイズシステム
     // ==========================================
     try {
-        if (!dbUrl || dbUrl.includes("あなたのプロジェクト名")) {
-            throw new Error("env.js の FIREBASE_DB_URL が正しく設定されていません。");
-        }
         const response = await fetch(`${dbUrl}.json`);
-        if (!response.ok) throw new Error();
         masterData = await response.json();
+        loadUserCards(); // ユーザー一覧を読み込み
     } catch (error) {
         showError(`データベースとの つながりに しっぱいしました。`);
         return;
     }
 
-    // 連動ギミック（学年→教科→単元）はそのまま維持
+    // 学年・教科・単元の連動処理（既存どおり）
     gradeSelect.addEventListener("change", () => {
         subjectSelect.innerHTML = '<option value="">-- きょうかを えらんでね --</option>';
         unitSelect.innerHTML = '<option value="">-- きょうかを えらんでね --</option>';
@@ -111,7 +168,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         subjectSelect.disabled = false;
     });
-
     subjectSelect.addEventListener("change", () => {
         unitSelect.innerHTML = '<option value="">-- たんげんを えらんでね --</option>';
         resetMenuButtons();
@@ -122,15 +178,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         unitSelect.disabled = false;
     });
-
     unitSelect.addEventListener("change", () => {
-        const selectedGrade = gradeSelect.value; const selectedSubject = subjectSubject = subjectSelect.value; const unitIndex = unitSelect.value;
+        const selectedGrade = gradeSelect.value; const selectedSubject = subjectSelect.value; const unitIndex = unitSelect.value;
         if (!unitIndex) { resetMenuButtons(); return; }
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitIndex];
         qCountInput.value = unitData.defaultQuestions;
         showIntroBtn.disabled = false; startBattleBtn.disabled = false;
     });
-
     function resetMenuButtons() { showIntroBtn.disabled = true; startBattleBtn.disabled = true; localIntroArea.style.display = "none"; }
 
     showIntroBtn.addEventListener("click", () => {
@@ -142,21 +196,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    // ⚔️ バトル開始
     startBattleBtn.addEventListener("click", async () => {
         errorBox.style.display = "none";
         if (!apiKey || apiKey.includes("secrets.")) { showError("APIキーが設定されていません。"); return; }
-
-        maxQuestions = parseInt(qCountInput.value) || 3; 
-        currentQuestionNum = 1; monsterHP = 100; correctCount = 0; // リセット
+        maxQuestions = parseInt(qCountInput.value) || 3; currentQuestionNum = 1; monsterHP = 100; correctCount = 0;
         currentMonster = monstersList[Math.floor(Math.random() * monstersList.length)];
-        
         menuArea.style.display = "none"; quizArea.style.display = "block";
         quizArea.innerHTML = `<div style="font-weight:bold; text-align:center; padding:40px; font-size:20px;">⚡ ${currentMonster.name} が あらわれた！</div>`;
-
         const success = await loadAllQuizzesAtOnce();
         if (!success) { menuArea.style.display = "block"; quizArea.style.display = "none"; return; }
-
         setupBattleUI(); displayCurrentQuiz();
     });
 
@@ -166,7 +214,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const isChoiceMode = unitData.type === "choice";
         let prompt = `小学校${selectedGrade}の${selectedSubject}（単元:${unitData.unit}）の問題を【${maxQuestions}問】作成し、JSON配列のみで返してください。漢字には必ずひらがなでルビを振ってください（例：漢字（かんじ））。\n`;
         prompt += isChoiceMode ? `[{"question": "問題文","choices": ["選1", "選2", "選3", "選4"],"answer": "正解の選択肢"}]` : `[{"question": "問題文","answer": "正解"}]`;
-
         try {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             const response = await fetch(geminiUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
@@ -182,7 +229,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function setupBattleUI() {
         quizArea.innerHTML = `
-            <div style="background:#34495e; color:white; padding:5px 10px; border-radius:5px; font-weight:bold; margin-bottom:15px; display:flex; justify-content:between;">
+            <div style="background:#34495e; color:white; padding:5px 10px; border-radius:5px; font-weight:bold; margin-bottom:15px; display:flex; justify-content:space-between;">
                 <span id="battle-stage-title">第 ${currentQuestionNum} / ${maxQuestions} 問</span>
             </div>
             <h3>👿 ${currentMonster.name}</h3>
@@ -200,7 +247,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("battle-quiz-text").innerText = currentQuiz.question;
         const inputArea = document.getElementById("battle-input-area");
         inputArea.innerHTML = ""; inputArea.style.pointerEvents = "auto";
-
         const unitData = masterData.grades[gradeSelect.value][subjectSelect.value][unitSelect.value];
         if (unitData.type === "choice") {
             currentQuiz.choices.forEach(choice => {
@@ -220,9 +266,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const effectOverlay = document.getElementById("effect-overlay");
         const isCorrect = String(userAnswer) === String(correctName);
         effectOverlay.style.display = "block";
-
         if (isCorrect) {
-            correctCount++; // 正解数をカウントアップ！
+            correctCount++;
             effectOverlay.style.cssText = "background:#d4edda; color:#155724; padding:10px; margin-top:10px; border-radius:8px;";
             effectOverlay.innerText = "✨ せいかい！！ ✨";
             monsterHP = Math.max(0, monsterHP - (100 / maxQuestions));
@@ -231,7 +276,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             effectOverlay.style.cssText = "background:#f8d7da; color:#721c24; padding:10px; margin-top:10px; border-radius:8px;";
             effectOverlay.innerText = `😢 まちがい！ こたえは 「${correctName}」`;
         }
-
         setTimeout(() => {
             currentQuestionNum++;
             if (currentQuestionNum > maxQuestions) { saveRecordAndShowResult(); } 
@@ -239,21 +283,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 2500); 
     }
 
-    // ==========================================
-    // 📊 今回の新機能：冒険の記録をFirebaseへセーブ！
-    // ==========================================
     async function saveRecordAndShowResult() {
         const isVictory = monsterHP <= 5;
         const selectedGrade = gradeSelect.value;
         const selectedSubject = subjectSelect.value;
         const unitData = masterData.grades[selectedGrade][selectedSubject][unitSelect.value];
-
         quizArea.innerHTML = `<div style="text-align:center; padding:20px;"><h3>⏳ ぼうけんの きろくを セーブ中...</h3></div>`;
 
-        // 📝 1. セーブデータオブジェクトを作成
         const newRecord = {
             playerName: window.currentUser.name,
-            date: new Date().toLocaleString("ja-JP"), // 解いた日時
+            date: new Date().toLocaleString("ja-JP"),
             grade: selectedGrade,
             subject: selectedSubject,
             unit: unitData.unit,
@@ -263,10 +302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
 
         try {
-            // 📝 2. Firebaseの 「/records/[ユーザーのなまえ]」 の中に新しい記録を追記保存
             const recordUrl = `${dbUrl}records/${window.currentUser.name}.json`;
-            
-            // 既存のデータを取得して配列として追記する
             const response = await fetch(recordUrl);
             let userRecords = [];
             if (response.ok) {
@@ -274,24 +310,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (Array.isArray(data)) userRecords = data;
             }
             userRecords.push(newRecord);
-
-            await fetch(recordUrl, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(userRecords)
-            });
+            await fetch(recordUrl, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(userRecords) });
         } catch (e) {
             console.error("セーブに失敗しました", e);
         }
 
-        // 🏁 3. 結果画面の表示
         quizArea.innerHTML = `
             <div style="text-align:center; padding:20px;">
                 <h1 style="font-size:50px; margin:0;">${isVictory ? "🏆" : "🌟"}</h1>
                 <h2>${isVictory ? "モンスターに だいしょうり！" : "ぼうけん かんりょう！"}</h2>
-                <p style="font-size:18px; font-weight:bold; color:#7f8c8d;">
-                    ${maxQuestions}もん中、${correctCount}もん せいかいしたよ！
-                </p>
+                <p style="font-size:18px; font-weight:bold; color:#7f8c8d;">${maxQuestions}もん中、${correctCount}もん せいかいしたよ！</p>
                 <button onclick="location.reload()" style="background:#3498db; color:white; width:200px;">もう一度あそぶ</button>
             </div>
         `;
